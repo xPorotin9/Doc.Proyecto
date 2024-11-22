@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+
+    <!-- Círculo de fondo -->
+    <path
+        android:fillColor="#4CAF50"
+        android:pathData="M54,4C27.49,4 4,27.49 4,54C4,80.51 27.49,104 54,104C80.51,104 104,80.51 104,54C104,27.49 80.51,4 54,4Z"/>
+
+    <!-- Hoja principal -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M75,33C60,18 40,18 25,33C25,48 35,63 54,83C73,63 83,48 83,33C68,18 48,18 33,33"/>
+
+    <!-- Detalles internos de la hoja -->
+    <path
+        android:fillColor="#81C784"
+        android:pathData="M54,73C40,58 33,47 33,37C43,27 57,27 67,37C67,47 60,58 54,73Z"/>
+
+    <!-- Nervio central de la hoja -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M54,35L54,75"/>
+
+    <!-- Nervios laterales -->
+    <path
+        android:strokeColor="#FFFFFF"
+        android:strokeWidth="2"
+        android:strokeLineCap="round"
+        android:pathData="M54,45L45,38M54,55L42,45M54,65L44,55"/>
+
+    <path
+        android:strokeColor="#FFFFFF"
+        android:strokeWidth="2"
+        android:strokeLineCap="round"
+        android:pathData="M54,45L63,38M54,55L66,45M54,65L64,55"/>
+</vector>
