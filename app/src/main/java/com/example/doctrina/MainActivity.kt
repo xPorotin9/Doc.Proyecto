@@ -1,12 +1,17 @@
 package com.example.doctrina
 
 import android.Manifest
+import android.app.Activity
+import android.content.Intent
 import android.content.pm.PackageManager
 import android.location.Address
 import android.location.Geocoder
+import android.net.Uri
 import android.os.Bundle
+import android.view.View
 import android.widget.ArrayAdapter
 import android.widget.AutoCompleteTextView
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.widget.Toolbar
 import androidx.core.app.ActivityCompat
@@ -16,13 +21,33 @@ import com.google.android.gms.location.LocationServices
 import com.google.android.gms.location.Priority
 import com.google.android.material.button.MaterialButton
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
+import com.google.android.material.imageview.ShapeableImageView
 import com.google.android.material.textfield.TextInputEditText
 import java.util.Locale
 
 class MainActivity : AppCompatActivity() {
     private lateinit var fusedLocationClient: FusedLocationProviderClient
     private lateinit var editTextUbicacion: TextInputEditText
+    private lateinit var buttonAgregarImagen: MaterialButton
+    private lateinit var imageViewFoto: ShapeableImageView
+    private var selectedImageUri: Uri? = null
+
     private val LOCATION_PERMISSION_REQUEST_CODE = 123
+    private val IMAGE_PERMISSION_REQUEST_CODE = 456
+
+    private val galleryLauncher = registerForActivityResult(
+        ActivityResultContracts.StartActivityForResult()
+    ) { result ->
+        if (result.resultCode == Activity.RESULT_OK) {
+            val data: Intent? = result.data
+            data?.data?.let { uri ->
+                selectedImageUri = uri
+                imageViewFoto.setImageURI(uri)
+                imageViewFoto.visibility = View.VISIBLE
+                buttonAgregarImagen.text = "Cambiar imagen"
+            }
+        }
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -41,6 +66,8 @@ class MainActivity : AppCompatActivity() {
         val editTextDescripcion = findViewById<TextInputEditText>(R.id.editTextDescripcion)
         editTextUbicacion = findViewById(R.id.editTextUbicacion)
         val buttonEnviar = findViewById<MaterialButton>(R.id.buttonEnviar)
+        buttonAgregarImagen = findViewById(R.id.buttonAgregarImagen)
+        imageViewFoto = findViewById(R.id.imageViewFoto)
 
         val problemas = arrayOf(
             "Contaminación del aire",
@@ -62,6 +89,11 @@ class MainActivity : AppCompatActivity() {
             requestLocation()
         }
 
+        // Configurar el botón de agregar imagen
+        buttonAgregarImagen.setOnClickListener {
+            openGallery()
+        }
+
         buttonEnviar.setOnClickListener {
             val tipoProblema = spinnerTipoProblema.text.toString()
             val descripcion = editTextDescripcion.text.toString()
@@ -72,31 +104,52 @@ class MainActivity : AppCompatActivity() {
                 return@setOnClickListener
             }
 
+            // Opcional: Validar que se ha seleccionado una imagen
+            if (selectedImageUri == null) {
+                showErrorDialog("Por favor agregue una imagen de evidencia")
+                return@setOnClickListener
+            }
+
+            // Aquí podrías manejar el selectedImageUri para enviarlo
             showSuccessDialog()
         }
     }
 
-    private fun showSuccessDialog() {
-        MaterialAlertDialogBuilder(this)
-            .setIcon(R.drawable.ic_success)
-            .setTitle("¡Éxito!")
-            .setMessage("Reporte enviado exitosamente")
-            .setPositiveButton("Aceptar") { dialog, _ ->
-                dialog.dismiss()
-                // Limpiar campos
-                findViewById<AutoCompleteTextView>(R.id.spinnerTipoProblema).text.clear()
-                findViewById<TextInputEditText>(R.id.editTextDescripcion).text?.clear()
-                findViewById<TextInputEditText>(R.id.editTextUbicacion).text?.clear()
+    private fun openGallery() {
+        when {
+            ContextCompat.checkSelfPermission(
+                this,
+                Manifest.permission.READ_MEDIA_IMAGES
+            ) == PackageManager.PERMISSION_GRANTED -> {
+                val intent = Intent(Intent.ACTION_PICK)
+                intent.type = "image/*"
+                galleryLauncher.launch(intent)
             }
-            .show()
+            shouldShowRequestPermissionRationale(Manifest.permission.READ_MEDIA_IMAGES) -> {
+                showImagePermissionRationale()
+            }
+            else -> {
+                ActivityCompat.requestPermissions(
+                    this,
+                    arrayOf(Manifest.permission.READ_MEDIA_IMAGES),
+                    IMAGE_PERMISSION_REQUEST_CODE
+                )
+            }
+        }
     }
 
-    private fun showErrorDialog(message: String) {
+    private fun showImagePermissionRationale() {
         MaterialAlertDialogBuilder(this)
-            .setIcon(R.drawable.ic_warning)
-            .setTitle("Error")
-            .setMessage(message)
-            .setPositiveButton("Aceptar") { dialog, _ ->
+            .setTitle("Permiso de imágenes necesario")
+            .setMessage("Necesitamos acceder a tus imágenes para poder adjuntar evidencia fotográfica. ¿Deseas habilitarlo?")
+            .setPositiveButton("Sí") { _, _ ->
+                ActivityCompat.requestPermissions(
+                    this,
+                    arrayOf(Manifest.permission.READ_MEDIA_IMAGES),
+                    IMAGE_PERMISSION_REQUEST_CODE
+                )
+            }
+            .setNegativeButton("No") { dialog, _ ->
                 dialog.dismiss()
             }
             .show()
@@ -188,10 +241,46 @@ class MainActivity : AppCompatActivity() {
         grantResults: IntArray
     ) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults)
-        if (requestCode == LOCATION_PERMISSION_REQUEST_CODE &&
-            grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED
-        ) {
-            getLocation()
+        when (requestCode) {
+            LOCATION_PERMISSION_REQUEST_CODE -> {
+                if (grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+                    getLocation()
+                }
+            }
+            IMAGE_PERMISSION_REQUEST_CODE -> {
+                if (grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+                    openGallery()
+                }
+            }
         }
+    }
+
+    private fun showSuccessDialog() {
+        MaterialAlertDialogBuilder(this)
+            .setIcon(R.drawable.ic_success)
+            .setTitle("¡Éxito!")
+            .setMessage("Reporte enviado exitosamente")
+            .setPositiveButton("Aceptar") { dialog, _ ->
+                dialog.dismiss()
+                // Limpiar campos
+                findViewById<AutoCompleteTextView>(R.id.spinnerTipoProblema).text.clear()
+                findViewById<TextInputEditText>(R.id.editTextDescripcion).text?.clear()
+                findViewById<TextInputEditText>(R.id.editTextUbicacion).text?.clear()
+                imageViewFoto.visibility = View.GONE
+                selectedImageUri = null
+                buttonAgregarImagen.text = "Agregar imagen"
+            }
+            .show()
+    }
+
+    private fun showErrorDialog(message: String) {
+        MaterialAlertDialogBuilder(this)
+            .setIcon(R.drawable.ic_warning)
+            .setTitle("Error")
+            .setMessage(message)
+            .setPositiveButton("Aceptar") { dialog, _ ->
+                dialog.dismiss()
+            }
+            .show()
     }
 }

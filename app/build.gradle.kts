@@ -37,6 +37,8 @@ android {
 }
 
 dependencies {
+    implementation("androidx.activity:activity-ktx:1.8.2")
+    implementation("com.google.android.material:material:1.11.0")
     implementation("com.google.android.gms:play-services-location:21.1.0")
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.appcompat)
